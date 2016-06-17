@@ -47,6 +47,9 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
       moduleSymbols.forEach(function(moduleSymbol) {
 
         var moduleDoc = createModuleDoc(moduleSymbol, basePath);
+        if (modules[moduleDoc.id]) {
+          throw new Error('module already defined: ' + moduleDoc.id);
+        }
 
         // Add this module doc to the module lookup collection and the docs collection
         modules[moduleDoc.id] = moduleDoc;
@@ -385,7 +388,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     } else if (declaration.initializer) {
       // The symbol does not have a "type" but it is being initialized
       // so we can deduce the type of from the initializer (mostly).
-      if (declaration.initializer.expression) {
+      if (declaration.initializer.expression && declaration.initializer.expression.text) {
         return declaration.initializer.expression.text.trim();
       } else {
         return getType(sourceFile, declaration.initializer).trim();
