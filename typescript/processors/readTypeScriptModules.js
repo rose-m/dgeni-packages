@@ -148,6 +148,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     var id = moduleSymbol.name.replace(/^"|"$/g, '');
     var name = id.split('/').pop();
     var moduleDoc = {
+      ignoreInJsdoc: true,
       docType: 'module',
       name: name,
       id: id,
@@ -205,6 +206,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     }
 
     var exportDoc = {
+      ignoreInJsdoc: true,
       docType: getExportDocType(exportSymbol),
       exportSymbol: exportSymbol,
       name: name,
@@ -248,6 +250,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
   function createMemberDoc(memberSymbol, classDoc, basePath, typeChecker) {
     var memberDoc = {
+      ignoreInJsdoc: true,
       docType: 'member',
       classDoc: classDoc,
       name: memberSymbol.name,

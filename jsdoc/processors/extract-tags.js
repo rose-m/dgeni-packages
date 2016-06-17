@@ -16,6 +16,10 @@ module.exports = function extractTagsProcessor(log, parseTagsProcessor, createDo
     $process: function(docs) {
       var tagExtractor = createTagExtractor(parseTagsProcessor.tagDefinitions, this.defaultTagTransforms);
       docs.forEach(function(doc) {
+        if (doc.ignoreInJsdoc) {
+          log.debug(createDocMessage('ignoring for JSDoc', doc));
+          return;
+        }
         log.debug(createDocMessage('extracting tags', doc));
         tagExtractor(doc);
       });
@@ -76,7 +80,7 @@ module.exports = function extractTagsProcessor(log, parseTagsProcessor, createDo
         if ( tags.length === 0 ) {
 
           // This tag is required so throw an error
-          if ( tagDef.required ) {
+          if ( (typeof tagDef.required === 'function' && tagDef.required(doc)) || tagDef.required === true ) {
             throw new Error(createDocMessage('Missing tag "' + tagDef.name, doc));
           }
 

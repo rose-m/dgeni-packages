@@ -50,6 +50,18 @@ describe("extractTagsProcessor", function() {
         '    * second bad thing\n\n');
   });
 
+  it("should not do anything if the doc is set to be ignored", function() {
+    var tagDef = { name: 'a' };
+    parseTagsProcessor.tagDefinitions = [tagDef];
+
+    var tag = new Tag(tagDef, 'a', 'some content', 123);
+    var doc = createDoc([tag]);
+    doc.ignoreInJsdoc = true;
+
+    processor.$process([doc]);
+    expect(doc.a).toBeUndefined();
+  });
+
   describe('default tag-def', function() {
     it("should the extract the description property to a property with the name of the tagDef", function() {
       var tagDef = { name: 'a' };
@@ -105,6 +117,22 @@ describe("extractTagsProcessor", function() {
       expect(function() {
         processor.$process([doc]);
       }).toThrow();
+    });
+
+    it("should call the callback function if it is not just a boolean", function() {
+      var calledDoc = null;
+      var tagDef = {
+        name: 'a',
+        required: function (doc) {
+          calledDoc = doc;
+          return false;
+        }
+      };
+      parseTagsProcessor.tagDefinitions = [tagDef];
+
+      var doc = createDoc([]);
+      processor.$process([doc]);
+      expect(doc).toEqual(calledDoc);
     });
   });
 
