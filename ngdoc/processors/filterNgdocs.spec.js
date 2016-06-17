@@ -35,4 +35,19 @@ describe("filter-ngdocs doc-processor plugin", function() {
 
     expect(filteredDocs).toEqual([doc1, doc3]);
   });
+
+  it("should not filter docs ignored in JSDoc", function() {
+
+    var doc1 = { tags: createMockTagCollection({ngdoc: 'a'}) };
+
+    var doc2 = { tags: createMockTagCollection({other: 'b'}), ignoredInJsdoc: true };
+
+    var doc3 = { tags: createMockTagCollection({}) };
+
+    var docs = [ doc1, doc2, doc3 ];
+
+    var filteredDocs = processor.$process(docs);
+
+    expect(filteredDocs).toEqual([doc1, doc2]);
+  });
 });
