@@ -40,7 +40,7 @@ module.exports = function tsParser(createCompilerHost, log) {
           });
 
           if (statementsWithSymbols.length) {
-            extractModuleSymbols(moduleSymbols, statementsWithSymbols);
+            extractModuleOrNamespaceSymbols(typeChecker, moduleSymbols, statementsWithSymbols);
           } else {
             // Some files contain only a comment and no actual module code
             log.warn('No module code found in ' + fileName);
@@ -76,20 +76,19 @@ module.exports = function tsParser(createCompilerHost, log) {
         host: host
       };
 
-      function extractModuleSymbols(moduleSymbols, statementsWithSymbols) {
+      function extractModuleOrNamespaceSymbols(typeChecker, moduleSymbols, statementsWithSymbols) {
         statementsWithSymbols.forEach(function (stmt) {
-          if (stmt.kind === ts.SyntaxKind.ModuleDeclaration) {
-            moduleSymbols.push(getNextModuleDeclaration(stmt.symbol) || stmt.symbol);
-          } else {
-            moduleSymbols.push(stmt.symbol);
+          var symbol = getClosestModuleDeclarationWithExports(stmt.symbol);
+          if (symbol) {
+            moduleSymbols.push(symbol);
           }
         });
 
-        function getNextModuleDeclaration(symbol) {
-          if (symbol.declarations && symbol.declarations.length == 1) {
+        function getClosestModuleDeclarationWithExports(symbol) {
+          if (!typeChecker.getExportsOfModule(symbol).length && symbol.declarations && symbol.declarations.length == 1) {
             var declaration = symbol.declarations[0];
             if (declaration.kind === ts.SyntaxKind.ModuleDeclaration && declaration.body.symbol) {
-              return getNextModuleDeclaration(declaration.body.symbol) || symbol;
+              return getClosestModuleDeclarationWithExports(declaration.body.symbol);
             }
           }
           return symbol;

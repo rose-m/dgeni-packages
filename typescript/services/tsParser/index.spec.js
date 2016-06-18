@@ -19,11 +19,10 @@ describe('tsParser', function() {
     expect(tsModules[0].exportArray.map(function(i) { return i.name; })).toEqual(['MyClass', 'myFn', 'x']);
   });
 
-  it("should parse explicit modules", function() {
-    var parseInfo = parser.parse(['explicitModule.ts'], path.resolve(__dirname, '../../mocks/tsParser'));
+  it("should correctly extract namespace", function () {
+    var parseInfo = parser.parse(['namespace.ts'], path.resolve(__dirname, '../../mocks/tsParser'));
     var tsModules = parseInfo.moduleSymbols;
     expect(tsModules.length).toEqual(1);
-    expect(tsModules[0].exportArray.length).toEqual(1);
-    expect(tsModules[0].exportArray.map(function (i) { return i.name; })).toEqual(['InnerClass']);
-  })
+    expect(tsModules[0].name).toBe('example');
+  });
 });
