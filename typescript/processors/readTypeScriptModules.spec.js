@@ -180,7 +180,23 @@ describe('readTypeScriptModules', function() {
       expect(moduleDoc.name).toEqual('privateModule');
     });
   });
+
+  describe('separated namespaces', function () {
+    it('should unite separated namespaces', function () {
+      processor.sourceFiles = ['uniteNamespaces1.ts', 'uniteNamespaces2.ts'];
+      var docs = [];
+      processor.$process(docs);
+
+      console.error(docs.map(function (d) { return d.docType; }));
+      expect(getDocsForType(docs, 'module').length).toBe(4);
+      expect(getDocsForType(docs, 'class').length).toBe(2);
+    })
+  });
 });
+
+function getDocsForType(docs, docType) {
+  return _.filter(docs, {docType: docType});
+}
 
 function getNames(collection) {
   return collection.map(function(item) { return item.name; });

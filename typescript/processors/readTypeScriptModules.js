@@ -45,11 +45,10 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
       // Iterate through each of the modules that were parsed and generate a module doc
       // as well as docs for each module's exports.
       moduleSymbols.forEach(function(moduleSymbol) {
-
         var moduleDoc = createModuleDoc(moduleSymbol, basePath);
-        if (modules[moduleDoc.id]) {
-          throw new Error('module already defined: ' + moduleDoc.id);
-        }
+        // if (modules[moduleDoc.id]) {
+        //   throw new Error('module already defined: ' + moduleDoc.id);
+        // }
 
         // Add this module doc to the module lookup collection and the docs collection
         modules[moduleDoc.id] = moduleDoc;
