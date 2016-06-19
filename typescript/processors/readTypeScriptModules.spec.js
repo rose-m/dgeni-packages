@@ -187,8 +187,14 @@ describe('readTypeScriptModules', function() {
       var docs = [];
       processor.$process(docs);
 
-      expect(getDocsForType(docs, 'module').length).toBe(4);
-      expect(getDocsForType(docs, 'class').length).toBe(2);
+      var moduleDocs = getDocsForType(docs, 'module');
+      expect(moduleDocs.length).toBe(2);
+      expect(getNames(moduleDocs)).toEqual(['example', 'test']);
+      expect(moduleDocs[1].exports.length).toBe(2);
+
+      var classDocs = getDocsForType(docs, 'class');
+      expect(classDocs.length).toBe(2);
+      expect(getNames(classDocs)).toEqual(['InnerClassOne', 'InnerClass']);
     });
 
     it('should unite separated module', function () {
@@ -196,8 +202,14 @@ describe('readTypeScriptModules', function() {
       var docs = [];
       processor.$process(docs);
 
-      expect(getDocsForType(docs, 'module').length).toBe(4);
-      expect(getDocsForType(docs, 'class').length).toBe(2);
+      var moduleDocs = getDocsForType(docs, 'module');
+      expect(moduleDocs.length).toBe(2);
+      expect(getNames(moduleDocs)).toEqual(['example', 'test']);
+      expect(moduleDocs[1].exports.length).toBe(2);
+
+      var classDocs = getDocsForType(docs, 'class');
+      expect(classDocs.length).toBe(2);
+      expect(getNames(classDocs)).toEqual(['InnerClassOne', 'InnerClass']);
     });
   });
 });

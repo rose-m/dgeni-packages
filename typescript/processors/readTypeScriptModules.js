@@ -29,7 +29,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     // We can provide a collection of strings or regexes to ignore exports whose export names match
     ignoreExportsMatching: ['___esModule'],
 
-    $process: function(docs) {
+    $process: function (docs) {
 
       // Convert ignoreExportsMatching to an array of regexes
       var ignoreExportsMatching = convertToRegexCollection(this.ignoreExportsMatching);
@@ -48,18 +48,41 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
       function processModuleSymbol(moduleSymbol) {
         var moduleDoc = createModuleDoc(moduleSymbol, basePath);
-        // if (modules[moduleDoc.id]) {
-        //   throw new Error('module already defined: ' + moduleDoc.id);
-        // }
 
         // Add this module doc to the module lookup collection and the docs collection
-        modules[moduleDoc.id] = moduleDoc;
-        docs.push(moduleDoc);
+        if (modules[moduleDoc.id]) {
+          // We need to merge module docs
+          var existingDoc = modules[moduleDoc.id];
+
+          // names must be the same
+          if (existingDoc.name !== moduleDoc.name) {
+            log.error('existing:', existing, 'new:', moduleDoc);
+            throw new Error('module docs with same id but diff name');
+          }
+
+          // check if both have content -> conflict
+          if (existingDoc.content && moduleDoc.content) {
+            log.warn('duplicate content for module:', existingDoc, moduleDoc);
+          } else if (moduleDoc.content) {
+            existingDoc.content = moduleDoc.content;
+          }
+
+          existingDoc.merged = true;
+          moduleDoc.mergedInto = existingDoc;
+        } else {
+          modules[moduleDoc.id] = moduleDoc;
+          docs.push(moduleDoc);
+        }
 
         // Iterate through this module's exports and generate a doc for each
         moduleSymbol.exportArray.forEach(function (moduleSymbol) {
           processExportedSymbol(moduleDoc, moduleSymbol);
         });
+
+        if (moduleDoc.mergedInto) {
+          // Flatten exports?
+          moduleDoc.mergedInto.exports = (moduleDoc.mergedInto.exports || []).concat(moduleDoc.exports || []);
+        }
       }
 
       function processExportedSymbol(moduleDoc, exportSymbol) {
@@ -94,7 +117,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         // Generate docs for each of the export's members
         if (resolvedExport.flags & ts.SymbolFlags.HasMembers) {
 
-          for(var memberName in resolvedExport.members) {
+          for (var memberName in resolvedExport.members) {
             // FIXME(alexeagle): why do generic type params appear in members?
             if (memberName === 'T') {
               continue;
@@ -121,7 +144,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         }
 
         if (exportDoc.docType === 'enum') {
-          for(var memberName in resolvedExport.exports) {
+          for (var memberName in resolvedExport.exports) {
             log.silly('>>>>>> member: ' + memberName + ' from ' + exportDoc.id + ' in ' + moduleDoc.id);
             var memberSymbol = resolvedExport.exports[memberName];
             var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
@@ -141,12 +164,12 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         }
 
         if (sortClassMembers) {
-          exportDoc.members.sort(function(a, b) {
+          exportDoc.members.sort(function (a, b) {
             if (a.name > b.name) return 1;
             if (a.name < b.name) return -1;
             return 0;
           });
-          exportDoc.statics.sort(function(a, b) {
+          exportDoc.statics.sort(function (a, b) {
             if (a.name > b.name) return 1;
             if (a.name < b.name) return -1;
             return 0;
@@ -179,7 +202,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     var heritageString = '';
     var typeDefinition = '';
 
-    exportSymbol.declarations.forEach(function(decl) {
+    exportSymbol.declarations.forEach(function (decl) {
       var sourceFile = ts.getSourceFileOfNode(decl);
 
       if (decl.typeParameters) {
@@ -191,18 +214,18 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
       }
 
       if (decl.heritageClauses) {
-        decl.heritageClauses.forEach(function(heritage) {
+        decl.heritageClauses.forEach(function (heritage) {
 
           if (heritage.token == ts.SyntaxKind.ExtendsKeyword) {
             heritageString += " extends";
-            heritage.types.forEach(function(typ, idx) {
+            heritage.types.forEach(function (typ, idx) {
               heritageString += (idx > 0 ? ',' : '') + typ.getFullText();
             });
           }
 
           if (heritage.token == ts.SyntaxKind.ImplementsKeyword) {
             heritageString += " implements";
-            heritage.types.forEach(function(typ, idx) {
+            heritage.types.forEach(function (typ, idx) {
               heritageString += (idx > 0 ? ', ' : '') + typ.getFullText();
             });
           }
@@ -235,18 +258,18 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
     if (exportDoc.docType === 'var' || exportDoc.docType === 'const' || exportDoc.docType === 'let') {
       exportDoc.symbolTypeName = exportSymbol.valueDeclaration.type &&
-                                 exportSymbol.valueDeclaration.type.typeName &&
-                                 exportSymbol.valueDeclaration.type.typeName.text;
+        exportSymbol.valueDeclaration.type.typeName &&
+        exportSymbol.valueDeclaration.type.typeName.text;
     }
 
     if (exportDoc.docType === 'type-alias') {
       exportDoc.returnType = getReturnType(typeChecker, exportSymbol);
     }
 
-    if(exportSymbol.flags & ts.SymbolFlags.Function) {
+    if (exportSymbol.flags & ts.SymbolFlags.Function) {
       exportDoc.parameters = getParameters(typeChecker, exportSymbol);
     }
-    if(exportSymbol.flags & ts.SymbolFlags.Value) {
+    if (exportSymbol.flags & ts.SymbolFlags.Value) {
       exportDoc.returnType = getReturnType(typeChecker, exportSymbol);
     }
     if (exportSymbol.flags & ts.SymbolFlags.TypeAlias) {
@@ -255,7 +278,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
     // Compute the original module name from the relative file path
     exportDoc.originalModule = exportDoc.fileInfo.projectRelativePath
-        .replace(new RegExp('\.' + exportDoc.fileInfo.extension + '$'), '');
+      .replace(new RegExp('\.' + exportDoc.fileInfo.extension + '$'), '');
 
     return exportDoc;
   }
@@ -274,10 +297,10 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
     memberDoc.typeParameters = getTypeParameters(typeChecker, memberSymbol);
 
-    if(memberSymbol.flags & (ts.SymbolFlags.Signature) ) {
+    if (memberSymbol.flags & (ts.SymbolFlags.Signature)) {
       memberDoc.parameters = getParameters(typeChecker, memberSymbol);
       memberDoc.returnType = getReturnType(typeChecker, memberSymbol);
-      switch(memberDoc.name) {
+      switch (memberDoc.name) {
         case '__call':
           memberDoc.name = '';
           break;
@@ -299,11 +322,11 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
       memberDoc.name = 'constructor';
     }
 
-    if(memberSymbol.flags & ts.SymbolFlags.Value) {
+    if (memberSymbol.flags & ts.SymbolFlags.Value) {
       memberDoc.returnType = getReturnType(typeChecker, memberSymbol);
     }
 
-    if(memberSymbol.flags & ts.SymbolFlags.Optional) {
+    if (memberSymbol.flags & ts.SymbolFlags.Optional) {
       memberDoc.optional = true;
     }
 
@@ -316,25 +339,25 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     var declaration = symbol.valueDeclaration || symbol.declarations[0];
     var sourceFile = ts.getSourceFileOfNode(declaration);
 
-    var decorators = declaration.decorators && declaration.decorators.map(function(decorator) {
-      decorator = decorator.expression;
-      return {
-        name: decorator.expression ? decorator.expression.text : decorator.text,
-        arguments: decorator.arguments && decorator.arguments.map(function(argument) {
-          return getText(sourceFile, argument).trim();
-        }),
-        argumentInfo: decorator.arguments && decorator.arguments.map(function(argument) {
-          return parseArgument(argument);
-        }),
-        expression: decorator
-      };
-    });
+    var decorators = declaration.decorators && declaration.decorators.map(function (decorator) {
+        decorator = decorator.expression;
+        return {
+          name: decorator.expression ? decorator.expression.text : decorator.text,
+          arguments: decorator.arguments && decorator.arguments.map(function (argument) {
+            return getText(sourceFile, argument).trim();
+          }),
+          argumentInfo: decorator.arguments && decorator.arguments.map(function (argument) {
+            return parseArgument(argument);
+          }),
+          expression: decorator
+        };
+      });
     return decorators;
   }
 
   function parseProperties(properties) {
     var result = {};
-    _.forEach(properties, function(property) {
+    _.forEach(properties, function (property) {
       result[property.name.text] = parseArgument(property.initializer);
     });
     return result;
@@ -343,7 +366,9 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
   function parseArgument(argument) {
     if (argument.text) return argument.text;
     if (argument.properties) return parseProperties(argument.properties);
-    if (argument.elements) return argument.elements.map(function(element) { return element.text; });
+    if (argument.elements) return argument.elements.map(function (element) {
+      return element.text;
+    });
     var sourceFile = ts.getSourceFileOfNode(argument);
     var text = getText(sourceFile, argument).trim();
     return text;
@@ -358,7 +383,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         '" in ' + sourceFile.fileName +
         ' at line ' + location.start.line);
     }
-    return declaration.parameters.map(function(parameter) {
+    return declaration.parameters.map(function (parameter) {
       var paramText = '';
       if (parameter.dotDotDotToken) {
         paramText += '...';
@@ -383,7 +408,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     var declaration = symbol.valueDeclaration || symbol.declarations[0];
     var sourceFile = ts.getSourceFileOfNode(declaration);
     if (!declaration.typeParameters) return;
-    var typeParams = declaration.typeParameters.map(function(type) {
+    var typeParams = declaration.typeParameters.map(function (type) {
       return getText(sourceFile, type).trim();
     });
     return typeParams;
@@ -408,7 +433,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
   function expandSourceFiles(sourceFiles, basePath) {
     var filePaths = [];
-    sourceFiles.forEach(function(sourcePattern) {
+    sourceFiles.forEach(function (sourcePattern) {
       if (sourcePattern.include) {
         var include = glob.sync(sourcePattern.include, {cwd: basePath});
         var exclude = [];
@@ -434,7 +459,9 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     var text = getText(sourceFile, type);
     while (text.indexOf(".") >= 0) {
       // Keep some namespaced symbols
-      if (_.some(ignoreTypeScriptNamespaces, function(regex) { return text.match(regex); })) break;
+      if (_.some(ignoreTypeScriptNamespaces, function (regex) {
+          return text.match(regex);
+        })) break;
       // handle the case List<thing.stuff> -> List<stuff>
       text = text.replace(/([^.<]*)\.([^>]*)/, "$2");
     }
@@ -462,14 +489,14 @@ function convertToRegexCollection(items) {
   }
 
   // Convert string to exact matching regexes
-  return items.map(function(item) {
+  return items.map(function (item) {
     return _.isString(item) ? new RegExp('^' + item + '$') : item;
   });
 }
 
 function anyMatches(regexes, item) {
-  for(var i=0; i<regexes.length; ++i) {
-    if ( item.match(regexes[i]) ) return true;
+  for (var i = 0; i < regexes.length; ++i) {
+    if (item.match(regexes[i])) return true;
   }
   return false;
 }
