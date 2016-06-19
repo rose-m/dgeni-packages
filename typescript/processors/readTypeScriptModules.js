@@ -8,7 +8,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
   return {
     $runAfter: ['files-read'],
-    $runBefore: ['parsing-tags'],
+    $runBefore: ['typescript-read'],
 
     $validate: {
       sourceFiles: {presence: false},

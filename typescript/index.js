@@ -31,6 +31,8 @@ module.exports = new Package('typescript', [require('../base')])
 // these namespaces will not be stripped if used for type parameters.
 .factory('ignoreTypeScriptNamespaces', function() { return []; })
 
+.processor({ name: 'typescript-read', $runAfter: ['files-read'], $runBefore: ['parsing-tags'] })
+
 // Register the processors
 .processor(require('./processors/readTypeScriptModules'))
 
