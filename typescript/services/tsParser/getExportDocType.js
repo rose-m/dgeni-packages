@@ -31,7 +31,7 @@ module.exports = function getExportDocType(log) {
       return getBlockScopedVariableDocType(symbol);
     }
 
-    log.warn('getExportDocType(): Unknown symbol type', {
+    console.error('getExportDocType(): Unknown symbol type', {
       symbolName: symbol.name,
       symbolType: symbol.flags,
       symbolTarget: symbol.target,

@@ -23,6 +23,8 @@ describe('tsParser', function() {
     var parseInfo = parser.parse(['namespace.ts'], path.resolve(__dirname, '../../mocks/tsParser'));
     var tsModules = parseInfo.moduleSymbols;
     expect(tsModules.length).toEqual(1);
-    expect(tsModules[0].name).toBe('example');
+    expect(tsModules[0].exportArray.length).toBe(1);
+    expect(tsModules[0].exportArray[0].name).toBe('test');
+    expect(tsModules[0].exportArray[0].exportArray.length).toBe(1);
   });
 });

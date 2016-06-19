@@ -49,23 +49,7 @@ module.exports = function tsParser(createCompilerHost, log) {
       });
 
 
-      moduleSymbols.forEach(function (tsModule) {
-
-        // The type checker has a nice helper function that returns an array of Symbols
-        // representing the exports for a given module
-        tsModule.exportArray = typeChecker.getExportsOfModule(tsModule);
-
-        // Although 'star' imports (e.g. `export * from 'some/module';) get resolved automatically
-        // by the compiler/binder, it seems that explicit imports (e.g. `export {SomeClass} from 'some/module'`)
-        // do not so we have to do a little work.
-        tsModule.exportArray.forEach(function (moduleExport) {
-          if (moduleExport.flags & ts.SymbolFlags.Alias) {
-            // To maintain the alias information (particularly the alias name)
-            // we just attach the original "resolved" symbol to the alias symbol
-            moduleExport.resolvedSymbol = typeChecker.getAliasedSymbol(moduleExport);
-          }
-        });
-      });
+      moduleSymbols.forEach(attachExportsToModule);
 
       moduleSymbols.typeChecker = typeChecker;
 
@@ -93,6 +77,26 @@ module.exports = function tsParser(createCompilerHost, log) {
           }
           return symbol;
         }
+      }
+
+      function attachExportsToModule(moduleSymbol) {
+        // The type checker has a nice helper function that returns an array of Symbols
+        // representing the exports for a given module
+        moduleSymbol.exportArray = typeChecker.getExportsOfModule(moduleSymbol);
+
+        // Although 'star' imports (e.g. `export * from 'some/module';) get resolved automatically
+        // by the compiler/binder, it seems that explicit imports (e.g. `export {SomeClass} from 'some/module'`)
+        // do not so we have to do a little work.
+        moduleSymbol.exportArray.forEach(function (moduleExport) {
+          if (moduleExport.flags & ts.SymbolFlags.Alias) {
+            // To maintain the alias information (particularly the alias name)
+            // we just attach the original "resolved" symbol to the alias symbol
+            moduleExport.resolvedSymbol = typeChecker.getAliasedSymbol(moduleExport);
+          } else if (moduleExport.flags & ts.SymbolFlags.Module) {
+            // We need to recursively add the exports
+            attachExportsToModule(moduleExport);
+          }
+        });
       }
     }
   };

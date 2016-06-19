@@ -44,7 +44,9 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
       // Iterate through each of the modules that were parsed and generate a module doc
       // as well as docs for each module's exports.
-      moduleSymbols.forEach(function(moduleSymbol) {
+      moduleSymbols.forEach(processModuleSymbol);
+
+      function processModuleSymbol(moduleSymbol) {
         var moduleDoc = createModuleDoc(moduleSymbol, basePath);
         // if (modules[moduleDoc.id]) {
         //   throw new Error('module already defined: ' + moduleDoc.id);
@@ -55,96 +57,104 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         docs.push(moduleDoc);
 
         // Iterate through this module's exports and generate a doc for each
-        moduleSymbol.exportArray.forEach(function(exportSymbol) {
+        moduleSymbol.exportArray.forEach(function (moduleSymbol) {
+          processExportedSymbol(moduleDoc, moduleSymbol);
+        });
+      }
 
-          // Ignore exports starting with an underscore
-          if (anyMatches(ignoreExportsMatching, exportSymbol.name)) return;
+      function processExportedSymbol(moduleDoc, exportSymbol) {
+        // Ignore exports starting with an underscore
+        if (anyMatches(ignoreExportsMatching, exportSymbol.name)) return;
 
-          // If the symbol is an Alias then for most things we want the original resolved symbol
-          var resolvedExport = exportSymbol.resolvedSymbol || exportSymbol;
+        // If the symbol is an Alias then for most things we want the original resolved symbol
+        var resolvedExport = exportSymbol.resolvedSymbol || exportSymbol;
 
-          // If the resolved symbol contains no declarations then it is invalid
-          // (probably an abstract class)
-          // For the moment we are just going to ignore such exports
-          // TODO: find a way of generating docs for them
-          if (!resolvedExport.declarations) return;
+        // If the symbol is a Module which is nested, we need to process the module itself
+        if (resolvedExport.flags & ts.SymbolFlags.Module) {
+          processModuleSymbol(resolvedExport);
+          return;
+        }
 
-          var exportDoc = createExportDoc(exportSymbol.name, resolvedExport, moduleDoc, basePath, parseInfo.typeChecker);
-          log.debug('>>>> EXPORT: ' + exportDoc.name + ' (' + exportDoc.docType + ') from ' + moduleDoc.id);
+        // If the resolved symbol contains no declarations then it is invalid
+        // (probably an abstract class)
+        // For the moment we are just going to ignore such exports
+        // TODO: find a way of generating docs for them
+        if (!resolvedExport.declarations) return;
 
-          // Add this export doc to its module doc
-          moduleDoc.exports.push(exportDoc);
-          docs.push(exportDoc);
+        var exportDoc = createExportDoc(exportSymbol.name, resolvedExport, moduleDoc, basePath, parseInfo.typeChecker);
+        log.debug('>>>> EXPORT: ' + exportDoc.name + ' (' + exportDoc.docType + ') from ' + moduleDoc.id);
 
-          exportDoc.members = [];
-          exportDoc.statics = [];
+        // Add this export doc to its module doc
+        moduleDoc.exports.push(exportDoc);
+        docs.push(exportDoc);
 
-          // Generate docs for each of the export's members
-          if (resolvedExport.flags & ts.SymbolFlags.HasMembers) {
+        exportDoc.members = [];
+        exportDoc.statics = [];
 
-            for(var memberName in resolvedExport.members) {
-              // FIXME(alexeagle): why do generic type params appear in members?
-              if (memberName === 'T') {
-                continue;
-              }
-              log.silly('>>>>>> member: ' + memberName + ' from ' + exportDoc.id + ' in ' + moduleDoc.id);
-              var memberSymbol = resolvedExport.members[memberName];
-              var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
+        // Generate docs for each of the export's members
+        if (resolvedExport.flags & ts.SymbolFlags.HasMembers) {
 
-              // We special case the constructor and sort the other members alphabetically
-              if (memberSymbol.flags & ts.SymbolFlags.Constructor) {
-                exportDoc.constructorDoc = memberDoc;
-                docs.push(memberDoc);
-              } else if (!hidePrivateMembers || memberSymbol.name.charAt(0) !== '_') {
-                docs.push(memberDoc);
-                exportDoc.members.push(memberDoc);
-              } else if (memberSymbol.name === '__call' && memberSymbol.flags & ts.SymbolFlags.Signature) {
-                docs.push(memberDoc);
-                exportDoc.callMember = memberDoc;
-              } else if (memberSymbol.name === '__new' && memberSymbol.flags & ts.SymbolFlags.Signature) {
-                docs.push(memberDoc);
-                exportDoc.newMember = memberDoc;
-              }
+          for(var memberName in resolvedExport.members) {
+            // FIXME(alexeagle): why do generic type params appear in members?
+            if (memberName === 'T') {
+              continue;
             }
-          }
+            log.silly('>>>>>> member: ' + memberName + ' from ' + exportDoc.id + ' in ' + moduleDoc.id);
+            var memberSymbol = resolvedExport.members[memberName];
+            var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
 
-          if (exportDoc.docType === 'enum') {
-            for(var memberName in resolvedExport.exports) {
-              log.silly('>>>>>> member: ' + memberName + ' from ' + exportDoc.id + ' in ' + moduleDoc.id);
-              var memberSymbol = resolvedExport.exports[memberName];
-              var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
+            // We special case the constructor and sort the other members alphabetically
+            if (memberSymbol.flags & ts.SymbolFlags.Constructor) {
+              exportDoc.constructorDoc = memberDoc;
+              docs.push(memberDoc);
+            } else if (!hidePrivateMembers || memberSymbol.name.charAt(0) !== '_') {
               docs.push(memberDoc);
               exportDoc.members.push(memberDoc);
-            }
-          } else if (resolvedExport.flags & ts.SymbolFlags.HasExports) {
-            for (var exported in resolvedExport.exports) {
-              if (exported === 'prototype') continue;
-              if (hidePrivateMembers && exported.charAt(0) === '_') continue;
-              var memberSymbol = resolvedExport.exports[exported];
-              var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
-              memberDoc.isStatic = true;
+            } else if (memberSymbol.name === '__call' && memberSymbol.flags & ts.SymbolFlags.Signature) {
               docs.push(memberDoc);
-              exportDoc.statics.push(memberDoc);
+              exportDoc.callMember = memberDoc;
+            } else if (memberSymbol.name === '__new' && memberSymbol.flags & ts.SymbolFlags.Signature) {
+              docs.push(memberDoc);
+              exportDoc.newMember = memberDoc;
             }
           }
+        }
 
-          if (sortClassMembers) {
-            exportDoc.members.sort(function(a, b) {
-              if (a.name > b.name) return 1;
-              if (a.name < b.name) return -1;
-              return 0;
-            });
-            exportDoc.statics.sort(function(a, b) {
-              if (a.name > b.name) return 1;
-              if (a.name < b.name) return -1;
-              return 0;
-            });
+        if (exportDoc.docType === 'enum') {
+          for(var memberName in resolvedExport.exports) {
+            log.silly('>>>>>> member: ' + memberName + ' from ' + exportDoc.id + ' in ' + moduleDoc.id);
+            var memberSymbol = resolvedExport.exports[memberName];
+            var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
+            docs.push(memberDoc);
+            exportDoc.members.push(memberDoc);
           }
-        });
-      });
+        } else if (resolvedExport.flags & ts.SymbolFlags.HasExports) {
+          for (var exported in resolvedExport.exports) {
+            if (exported === 'prototype') continue;
+            if (hidePrivateMembers && exported.charAt(0) === '_') continue;
+            var memberSymbol = resolvedExport.exports[exported];
+            var memberDoc = createMemberDoc(memberSymbol, exportDoc, basePath, parseInfo.typeChecker);
+            memberDoc.isStatic = true;
+            docs.push(memberDoc);
+            exportDoc.statics.push(memberDoc);
+          }
+        }
+
+        if (sortClassMembers) {
+          exportDoc.members.sort(function(a, b) {
+            if (a.name > b.name) return 1;
+            if (a.name < b.name) return -1;
+            return 0;
+          });
+          exportDoc.statics.sort(function(a, b) {
+            if (a.name > b.name) return 1;
+            if (a.name < b.name) return -1;
+            return 0;
+          });
+        }
+      }
     }
   };
-
 
   function createModuleDoc(moduleSymbol, basePath) {
     var id = moduleSymbol.name.replace(/^"|"$/g, '');

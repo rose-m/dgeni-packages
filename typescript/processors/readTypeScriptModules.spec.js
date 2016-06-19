@@ -181,16 +181,24 @@ describe('readTypeScriptModules', function() {
     });
   });
 
-  describe('separated namespaces', function () {
+  describe('separated modules and namespaces', function () {
     it('should unite separated namespaces', function () {
       processor.sourceFiles = ['uniteNamespaces1.ts', 'uniteNamespaces2.ts'];
       var docs = [];
       processor.$process(docs);
 
-      console.error(docs.map(function (d) { return d.docType; }));
       expect(getDocsForType(docs, 'module').length).toBe(4);
       expect(getDocsForType(docs, 'class').length).toBe(2);
-    })
+    });
+
+    it('should unite separated module', function () {
+      processor.sourceFiles = ['uniteModules1.ts', 'uniteModules2.ts'];
+      var docs = [];
+      processor.$process(docs);
+
+      expect(getDocsForType(docs, 'module').length).toBe(4);
+      expect(getDocsForType(docs, 'class').length).toBe(2);
+    });
   });
 });
 
