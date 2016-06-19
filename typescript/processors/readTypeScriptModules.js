@@ -61,9 +61,9 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
           }
 
           // check if both have content -> conflict
-          if (existingDoc.content && moduleDoc.content) {
-            log.warn('duplicate content for module:', existingDoc, moduleDoc);
-          } else if (moduleDoc.content) {
+          if (existingDoc.content && existingDoc.content.trim() && moduleDoc.content && moduleDoc.content.trim()) {
+            log.warn('duplicate content for module:', existingDoc.id, existingDoc.content, moduleDoc.content);
+          } else if (moduleDoc.content && moduleDoc.content.trim()) {
             existingDoc.content = moduleDoc.content;
           }
 

@@ -12,7 +12,7 @@ module.exports = function filterNgDocsProcessor(log) {
     $process: function(docs) {
       var docCount = docs.length;
       docs = _.filter(docs, function(doc) {
-        return doc.ignoredInJsdoc || doc.tags.getTag('ngdoc');
+        return doc.ignoreInJsdoc || doc.tags.getTag('ngdoc');
       });
       log.debug('filtered ' + (docCount - docs.length) + ' docs');
       return docs;
