@@ -40,7 +40,7 @@ describe("filter-ngdocs doc-processor plugin", function() {
 
     var doc1 = { tags: createMockTagCollection({ngdoc: 'a'}) };
 
-    var doc2 = { tags: createMockTagCollection({other: 'b'}), ignoredInJsdoc: true };
+    var doc2 = { tags: createMockTagCollection({other: 'b'}), ignoreInJsdoc: true };
 
     var doc3 = { tags: createMockTagCollection({}) };
 
