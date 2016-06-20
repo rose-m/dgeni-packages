@@ -190,6 +190,7 @@ describe('readTypeScriptModules', function() {
       var moduleDocs = getDocsForType(docs, 'module');
       expect(moduleDocs.length).toBe(2);
       expect(getNames(moduleDocs)).toEqual(['example', 'test']);
+      expect(moduleDocs[1].id).toBe('example/test');
       expect(moduleDocs[1].exports.length).toBe(2);
 
       var classDocs = getDocsForType(docs, 'class');
@@ -205,6 +206,7 @@ describe('readTypeScriptModules', function() {
       var moduleDocs = getDocsForType(docs, 'module');
       expect(moduleDocs.length).toBe(2);
       expect(getNames(moduleDocs)).toEqual(['example', 'test']);
+      expect(moduleDocs[1].id).toBe('example/test');
       expect(moduleDocs[1].exports.length).toBe(2);
 
       var classDocs = getDocsForType(docs, 'class');

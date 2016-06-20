@@ -44,10 +44,15 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
       // Iterate through each of the modules that were parsed and generate a module doc
       // as well as docs for each module's exports.
-      moduleSymbols.forEach(processModuleSymbol);
+      moduleSymbols.forEach(function (mod) {
+        processModuleSymbol(mod);
+      });
 
-      function processModuleSymbol(moduleSymbol) {
-        var moduleDoc = createModuleDoc(moduleSymbol, basePath);
+      function processModuleSymbol(moduleSymbol, parentModule) {
+        var moduleDoc = createModuleDoc(moduleSymbol, parentModule, basePath);
+        if (parentModule) {
+          parentModule.exports.push(moduleDoc);
+        }
 
         // Add this module doc to the module lookup collection and the docs collection
         if (modules[moduleDoc.id]) {
@@ -94,7 +99,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
 
         // If the symbol is a Module which is nested, we need to process the module itself
         if (resolvedExport.flags & ts.SymbolFlags.Module) {
-          processModuleSymbol(resolvedExport);
+          processModuleSymbol(resolvedExport, moduleDoc);
           return;
         }
 
@@ -179,8 +184,11 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     }
   };
 
-  function createModuleDoc(moduleSymbol, basePath) {
+  function createModuleDoc(moduleSymbol, parentModule, basePath) {
     var id = moduleSymbol.name.replace(/^"|"$/g, '');
+    if (parentModule && parentModule.id) {
+      id = parentModule.id + '/' + id;
+    }
     var name = id.split('/').pop();
     var moduleDoc = {
       ignoreInJsdoc: true,
