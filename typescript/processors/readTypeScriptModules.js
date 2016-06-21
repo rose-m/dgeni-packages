@@ -297,6 +297,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
       docType: 'member',
       classDoc: classDoc,
       name: memberSymbol.name,
+      access: getMemberAccess(memberSymbol),
       decorators: getDecorators(memberSymbol),
       content: getContent(memberSymbol),
       fileInfo: getFileInfo(memberSymbol, basePath),
@@ -341,6 +342,16 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     return memberDoc;
   }
 
+  function getMemberAccess(symbol) {
+    var declaration = symbol.valueDeclaration || symbol.declarations[0];
+    if (declaration.flags & ts.NodeFlags.Private) {
+      return 'private';
+    } else if (declaration.flags & ts.NodeFlags.Protected) {
+      return 'protected';
+    } else {
+      return 'public';
+    }
+  }
 
   function getDecorators(symbol) {
 

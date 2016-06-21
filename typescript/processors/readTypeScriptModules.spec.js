@@ -32,6 +32,18 @@ describe('readTypeScriptModules', function() {
       expect(exportedDoc.name).toEqual('AbstractClass');
     });
 
+    it('should check access', function() {
+      processor.sourceFiles = [ 'fullMemberExample.ts' ];
+      var docs = [];
+      processor.$process(docs);
+
+      expect(docs.length).toBe(10);
+      var members = getDocsForType(docs, 'member');
+      expect(members.length).toBe(8);
+      expect(_.filter(members, {access: 'public'}).length).toBe(4);
+      expect(_.filter(members, {access: 'protected'}).length).toBe(2);
+      expect(_.filter(members, {access: 'private'}).length).toBe(2);
+    });
   });
 
 
