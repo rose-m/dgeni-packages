@@ -40,9 +40,9 @@ describe('readTypeScriptModules', function() {
       expect(docs.length).toBe(10);
       var members = getDocsForType(docs, 'member');
       expect(members.length).toBe(8);
-      expect(_.filter(members, {access: 'public'}).length).toBe(4);
-      expect(_.filter(members, {access: 'protected'}).length).toBe(2);
-      expect(_.filter(members, {access: 'private'}).length).toBe(2);
+      expect(getNames(_.filter(members, {access: 'public'}))).toEqual(['publicString', 'constructor', 'constructorPublicString', 'publicMethod']);
+      expect(getNames(_.filter(members, {access: 'protected'}))).toEqual(['protectedNumber', 'protectedMethod']);
+      expect(getNames(_.filter(members, {access: 'private'}))).toEqual(['privateBoolean', 'privateMethod']);
     });
   });
 
