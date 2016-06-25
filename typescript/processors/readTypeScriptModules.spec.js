@@ -3,19 +3,19 @@ var Dgeni = require('dgeni');
 var path = require('canonical-path');
 var _ = require('lodash');
 
-describe('readTypeScriptModules', function() {
+describe('readTypeScriptModules', function () {
   var dgeni, injector, processor;
 
-  beforeEach(function() {
+  beforeEach(function () {
     dgeni = new Dgeni([mockPackage()]);
     injector = dgeni.configureInjector();
     processor = injector.get('readTypeScriptModules');
     processor.basePath = path.resolve(__dirname, '../mocks/readTypeScriptModules');
   });
 
-  describe('exportDocs', function() {
-    it('should provide the original module if the export is re-exported', function() {
-      processor.sourceFiles = [ 'publicModule.ts' ];
+  describe('exportDocs', function () {
+    it('should provide the original module if the export is re-exported', function () {
+      processor.sourceFiles = ['publicModule.ts'];
       var docs = [];
       processor.$process(docs);
 
@@ -23,8 +23,8 @@ describe('readTypeScriptModules', function() {
       expect(exportedDoc.originalModule).toEqual('privateModule');
     });
 
-    it('should include exported abstract classes', function() {
-      processor.sourceFiles = [ 'publicModule.ts' ];
+    it('should include exported abstract classes', function () {
+      processor.sourceFiles = ['publicModule.ts'];
       var docs = [];
       processor.$process(docs);
 
@@ -32,8 +32,8 @@ describe('readTypeScriptModules', function() {
       expect(exportedDoc.name).toEqual('AbstractClass');
     });
 
-    it('should check access', function() {
-      processor.sourceFiles = [ 'fullMemberExample.ts' ];
+    it('should check access', function () {
+      processor.sourceFiles = ['fullMemberExample.ts'];
       var docs = [];
       processor.$process(docs);
 
@@ -47,9 +47,9 @@ describe('readTypeScriptModules', function() {
   });
 
 
-  describe('ignoreExportsMatching', function() {
-    it('should ignore exports that match items in the `ignoreExportsMatching` property', function() {
-      processor.sourceFiles = [ 'ignoreExportsMatching.ts'];
+  describe('ignoreExportsMatching', function () {
+    it('should ignore exports that match items in the `ignoreExportsMatching` property', function () {
+      processor.sourceFiles = ['ignoreExportsMatching.ts'];
       processor.ignoreExportsMatching = [/^_/];
       var docs = [];
       processor.$process(docs);
@@ -57,13 +57,13 @@ describe('readTypeScriptModules', function() {
       var moduleDoc = docs[0];
       expect(moduleDoc.docType).toEqual('module');
       expect(moduleDoc.exports).toEqual([
-        jasmine.objectContaining({ name: 'OKToExport' }),
-        jasmine.objectContaining({ name: 'thisIsOK' })
+        jasmine.objectContaining({name: 'OKToExport'}),
+        jasmine.objectContaining({name: 'thisIsOK'})
       ]);
     });
 
-    it('should only ignore `___esModule` exports by default', function() {
-      processor.sourceFiles = [ 'ignoreExportsMatching.ts'];
+    it('should only ignore `___esModule` exports by default', function () {
+      processor.sourceFiles = ['ignoreExportsMatching.ts'];
       var docs = [];
       processor.$process(docs);
 
@@ -78,10 +78,10 @@ describe('readTypeScriptModules', function() {
   });
 
 
-  describe('interfaces', function() {
+  describe('interfaces', function () {
 
-    it('should mark optional properties', function() {
-      processor.sourceFiles = [ 'interfaces.ts'];
+    it('should mark optional properties', function () {
+      processor.sourceFiles = ['interfaces.ts'];
       var docs = [];
       processor.$process(docs);
 
@@ -93,8 +93,8 @@ describe('readTypeScriptModules', function() {
     });
 
 
-    it('should handle "call" type interfaces', function() {
-      processor.sourceFiles = [ 'interfaces.ts'];
+    it('should handle "call" type interfaces', function () {
+      processor.sourceFiles = ['interfaces.ts'];
       var docs = [];
       processor.$process(docs);
 
@@ -102,22 +102,32 @@ describe('readTypeScriptModules', function() {
       var exportedInterface = moduleDoc.exports[0];
 
       expect(exportedInterface.callMember).toBeDefined();
-      expect(exportedInterface.callMember.parameters).toEqual(['param: T']);
+      expect(exportedInterface.callMember.parameters).toEqual([{
+        name: 'param',
+        type: 'T',
+        optional: false,
+        defaultValue: undefined
+      }]);
       expect(exportedInterface.callMember.returnType).toEqual('U');
       expect(exportedInterface.callMember.typeParameters).toEqual(['T', 'U extends Findable<T>']);
       expect(exportedInterface.newMember).toBeDefined();
-      expect(exportedInterface.newMember.parameters).toEqual(['param: number']);
+      expect(exportedInterface.newMember.parameters).toEqual([{
+        name: 'param',
+        type: 'number',
+        optional: false,
+        defaultValue: undefined
+      }]);
       expect(exportedInterface.newMember.returnType).toEqual('MyInterface');
     });
   });
 
 
-  describe('ordering of members', function() {
-    it('should order class members in order of appearance (by default)', function() {
+  describe('ordering of members', function () {
+    it('should order class members in order of appearance (by default)', function () {
       processor.sourceFiles = ['orderingOfMembers.ts'];
       var docs = [];
       processor.$process(docs);
-      var classDoc = _.find(docs, { docType: 'class' });
+      var classDoc = _.find(docs, {docType: 'class'});
       expect(classDoc.docType).toEqual('class');
       expect(getNames(classDoc.members)).toEqual([
         'firstItem',
@@ -127,12 +137,12 @@ describe('readTypeScriptModules', function() {
     });
 
 
-    it('should not order class members if not sortClassMembers is false', function() {
+    it('should not order class members if not sortClassMembers is false', function () {
       processor.sourceFiles = ['orderingOfMembers.ts'];
       processor.sortClassMembers = false;
       var docs = [];
       processor.$process(docs);
-      var classDoc = _.find(docs, { docType: 'class' });
+      var classDoc = _.find(docs, {docType: 'class'});
       expect(classDoc.docType).toEqual('class');
       expect(getNames(classDoc.members)).toEqual([
         'firstItem',
@@ -147,7 +157,7 @@ describe('readTypeScriptModules', function() {
       processor.sourceFiles = ['stripNamespaces.ts'];
       var docs = [];
       processor.$process(docs);
-      var functionDoc = _.find(docs, { docType: 'function' });
+      var functionDoc = _.find(docs, {docType: 'function'});
       expect(functionDoc.returnType).toEqual('IDirective');
     });
 
@@ -157,12 +167,12 @@ describe('readTypeScriptModules', function() {
       processor.sourceFiles = ['stripNamespaces.ts'];
       var docs = [];
       processor.$process(docs);
-      var functionDoc = _.find(docs, { docType: 'function' });
+      var functionDoc = _.find(docs, {docType: 'function'});
       expect(functionDoc.returnType).toEqual('angular.IDirective');
     });
   });
 
-  describe('source file globbing patterns', function() {
+  describe('source file globbing patterns', function () {
     it('should work with include patterns', function () {
       processor.sourceFiles = [
         {
@@ -172,7 +182,7 @@ describe('readTypeScriptModules', function() {
       var docs = [];
       processor.$process(docs);
 
-      var moduleDocs = _.filter(docs, { docType: 'module' });
+      var moduleDocs = _.filter(docs, {docType: 'module'});
       expect(moduleDocs.length).toBe(2);
       expect(moduleDocs[0].name).toEqual('privateModule');
       expect(moduleDocs[1].name).toEqual('publicModule');
@@ -227,7 +237,7 @@ describe('readTypeScriptModules', function() {
     });
   });
 
-  describe('determine and infer types', function () {
+  describe('determine and infer types and signatures', function () {
     it('should determine declared types', function () {
       processor.sourceFiles = ['determineTypes.ts'];
       var docs = [];
@@ -270,6 +280,27 @@ describe('readTypeScriptModules', function() {
       expect(methodInlineType.name).toBe('methodInlineType');
       expect(methodInlineType.returnType).toBe('{ x:string; y:number }');
     });
+
+    it('should parse signatures', function () {
+      processor.sourceFiles = ['parseSignatures.ts'];
+      var docs = [];
+      processor.$process(docs);
+
+      var funcs = getDocsForType(docs, 'function');
+      expect(funcs.length).toBe(1);
+      check(funcs[0]);
+
+      var classes = getDocsForType(docs, 'class');
+      expect(classes.length).toBe(1);
+      var clazz = classes[0];
+      expect(clazz.members.length).toBe(1);
+      check(clazz.members[0]);
+
+      function check(doc) {
+        expect(doc.returnType).toBe('number');
+        expect(doc.parameters.length).toBe(3);
+      }
+    });
   });
 });
 
@@ -278,5 +309,7 @@ function getDocsForType(docs, docType) {
 }
 
 function getNames(collection) {
-  return collection.map(function(item) { return item.name; });
+  return collection.map(function (item) {
+    return item.name;
+  });
 }

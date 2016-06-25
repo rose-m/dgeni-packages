@@ -403,23 +403,12 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         ' at line ' + location.start.line);
     }
     return declaration.parameters.map(function (parameter) {
-      var paramText = '';
-      if (parameter.dotDotDotToken) {
-        paramText += '...';
-      }
-      paramText += getText(sourceFile, parameter.name);
-      if (parameter.questionToken || parameter.initializer) {
-        paramText += '?';
-      }
-      if (parameter.type) {
-        paramText += ':' + getType(sourceFile, parameter.type);
-      } else {
-        paramText += ': any';
-        if (parameter.dotDotDotToken) {
-          paramText += '[]';
-        }
-      }
-      return paramText.trim();
+      return {
+        name: getText(sourceFile, parameter.name).trim(),
+        type: getReturnType(typeChecker, parameter),
+        optional: !!(parameter.questionToken || parameter.initializer),
+        defaultValue: parameter.initializer && parameter.initializer.expression && getText(parameter.initializer.expression).trim()
+      };
     });
   }
 
@@ -434,7 +423,7 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
   }
 
   function getReturnType(typeChecker, symbol) {
-    var declaration = symbol.valueDeclaration || symbol.declarations[0];
+    var declaration = symbol.valueDeclaration || (symbol.declarations && symbol.declarations[0]) || symbol;
     var sourceFile = ts.getSourceFileOfNode(declaration);
     if (declaration.type) {
       return getType(sourceFile, declaration.type).trim();
