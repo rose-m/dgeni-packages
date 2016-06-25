@@ -226,6 +226,51 @@ describe('readTypeScriptModules', function() {
       expect(getNames(classDocs)).toEqual(['InnerClassOne', 'InnerClass']);
     });
   });
+
+  describe('determine and infer types', function () {
+    it('should determine declared types', function () {
+      processor.sourceFiles = ['determineTypes.ts'];
+      var docs = [];
+      processor.$process(docs);
+
+      var classes = getDocsForType(docs, 'class');
+      expect(classes.length).toBe(1);
+      var typesClass = classes[0];
+      expect(typesClass.members.length).toBe(8);
+
+      var simpleType = typesClass.members[0];
+      expect(simpleType.name).toBe('simpleType');
+      expect(simpleType.returnType).toBe('string');
+
+      var inferredBool = typesClass.members[1];
+      expect(inferredBool.name).toBe('inferredBool');
+      expect(inferredBool.returnType).toBe('boolean');
+
+      var inferredEnum = typesClass.members[2];
+      expect(inferredEnum.name).toBe('inferredEnum');
+      expect(inferredEnum.returnType).toBe('SimpleEnum');
+
+      var methodReturnsBool = typesClass.members[3];
+      expect(methodReturnsBool.name).toBe('methodReturnsBool');
+      expect(methodReturnsBool.returnType).toBe('boolean');
+
+      var methodInferredString = typesClass.members[4];
+      expect(methodInferredString.name).toBe('methodInferredString');
+      expect(methodInferredString.returnType).toBe('string');
+
+      var methodInferredEnum = typesClass.members[5];
+      expect(methodInferredEnum.name).toBe('methodInferredEnum');
+      expect(methodInferredEnum.returnType).toBe('SimpleEnum');
+
+      var methodInferredVoid = typesClass.members[6];
+      expect(methodInferredVoid.name).toBe('methodInferredVoid');
+      expect(methodInferredVoid.returnType).toBe('void');
+
+      var methodInlineType = typesClass.members[7];
+      expect(methodInlineType.name).toBe('methodInlineType');
+      expect(methodInlineType.returnType).toBe('{ x:string; y:number }');
+    });
+  });
 });
 
 function getDocsForType(docs, docType) {

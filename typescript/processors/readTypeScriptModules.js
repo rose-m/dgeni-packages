@@ -438,13 +438,21 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
     var sourceFile = ts.getSourceFileOfNode(declaration);
     if (declaration.type) {
       return getType(sourceFile, declaration.type).trim();
-    } else if (declaration.initializer) {
-      // The symbol does not have a "type" but it is being initialized
-      // so we can deduce the type of from the initializer (mostly).
-      if (declaration.initializer.expression && declaration.initializer.expression.text) {
-        return declaration.initializer.expression.text.trim();
+    } else {
+      var type;
+      if (declaration.initializer) {
+        // The symbol does not have a "type" but it is being initialized
+        // so we can deduce the type of from the initializer (mostly).
+        type = typeChecker.getTypeAtLocation(declaration.initializer);
+      } else if (symbol.flags & ts.SymbolFlags.Method || symbol.flags & ts.SymbolFlags.Function) {
+        var signature = typeChecker.getSignatureFromDeclaration(declaration);
+        type = signature.getReturnType();
+      }
+
+      if (type) {
+        return type.intrinsicName || typeChecker.typeToString(type);
       } else {
-        return getType(sourceFile, declaration.initializer).trim();
+        log.warn('failed to determine type for symbol at: {}', getLocation(symbol));
       }
     }
   }
