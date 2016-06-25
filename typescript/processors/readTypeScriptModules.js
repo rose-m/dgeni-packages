@@ -403,12 +403,23 @@ module.exports = function readTypeScriptModules(tsParser, modules, getFileInfo, 
         ' at line ' + location.start.line);
     }
     return declaration.parameters.map(function (parameter) {
-      return {
+      var paramDoc = {
         name: getText(sourceFile, parameter.name).trim(),
         type: getReturnType(typeChecker, parameter),
-        optional: !!(parameter.questionToken || parameter.initializer),
-        defaultValue: parameter.initializer && parameter.initializer.expression && getText(parameter.initializer.expression).trim()
+        optional: typeChecker.isOptionalParameter(parameter),
+        hasDefault: false
       };
+      if (parameter.initializer) {
+        if (parameter.initializer.text) {
+          paramDoc.hasDefault = true;
+          paramDoc.defaultValue = parameter.initializer.text.trim();
+        } else if (parameter.initializer.expression) {
+          paramDoc.hasDefault = true;
+          paramDoc.defaultValue = getText(sourceFile, parameter.initializer).trim();
+          paramDoc.defaultValueNoLiteral = true;
+        }
+      }
+      return paramDoc;
     });
   }
 

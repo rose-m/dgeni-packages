@@ -106,7 +106,7 @@ describe('readTypeScriptModules', function () {
         name: 'param',
         type: 'T',
         optional: false,
-        defaultValue: undefined
+        hasDefault: false
       }]);
       expect(exportedInterface.callMember.returnType).toEqual('U');
       expect(exportedInterface.callMember.typeParameters).toEqual(['T', 'U extends Findable<T>']);
@@ -115,7 +115,7 @@ describe('readTypeScriptModules', function () {
         name: 'param',
         type: 'number',
         optional: false,
-        defaultValue: undefined
+        hasDefault: false
       }]);
       expect(exportedInterface.newMember.returnType).toEqual('MyInterface');
     });
@@ -293,12 +293,48 @@ describe('readTypeScriptModules', function () {
       var classes = getDocsForType(docs, 'class');
       expect(classes.length).toBe(1);
       var clazz = classes[0];
-      expect(clazz.members.length).toBe(1);
+      expect(clazz.members.length).toBe(2);
       check(clazz.members[0]);
+
+      var memberConstDefault = clazz.members[1];
+      expect(memberConstDefault.parameters.length).toBe(2);
+      expect(memberConstDefault.parameters[0]).toEqual({
+        name: 'param',
+        type: 'string',
+        optional: true,
+        hasDefault: true,
+        defaultValue: 'FunctionHelper.CONST_MEMBER',
+        defaultValueNoLiteral: true
+      });
+      expect(memberConstDefault.parameters[1]).toEqual({
+        name: 'andVarArg',
+        type: 'number[]',
+        optional: false,
+        hasDefault: false
+      });
 
       function check(doc) {
         expect(doc.returnType).toBe('number');
         expect(doc.parameters.length).toBe(3);
+        expect(doc.parameters[0]).toEqual({
+          name: 'firstParam',
+          type: 'boolean',
+          optional: false,
+          hasDefault: false
+        });
+        expect(doc.parameters[1]).toEqual({
+          name: 'secondParam',
+          type: 'string',
+          optional: true,
+          hasDefault: true,
+          defaultValue: 'withDefault'
+        });
+        expect(doc.parameters[2]).toEqual({
+          name: 'thirdOptional',
+          type: 'any',
+          optional: true,
+          hasDefault: false
+        });
       }
     });
   });
